@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage, AIMessage 
 from embedder import getEmbedder
 from embedd_files import embeddFiles
-from fn import getRagChain
+from chain_setup import getRagChain
 
 
 # assuming files are present in books directory
