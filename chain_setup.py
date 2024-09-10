@@ -1,10 +1,13 @@
 import os
 from dotenv import load_dotenv
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_community.vectorstores import Chroma
+# from langchain.chains.history_aware_retriever import create_history_aware_retriever
+# from langchain.chains.retrieval  import create_retrieval_chain
+# from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.runnables import RunnableBranch , RunnableSequence , RunnableLambda , RunnableParallel
+from langchain_core.output_parsers import StrOutputParser
 
 from embedder import getEmbedder
 
@@ -22,8 +25,8 @@ def getRagChain(collection_name : str) -> any:
 
     # Create a retriever for querying the vector store
     retriever = db.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": 3},
+        search_type="similarity_score_threshold",
+        search_kwargs={"k": 3 , "score_threshold" : 0.3},
     )
 
     # Create the LLM model
@@ -45,23 +48,22 @@ def getRagChain(collection_name : str) -> any:
         [
             ("system", contextualize_q_system_prompt),
             MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
+            ("human", "{query}"),
         ]
     )
 
     # Create a history-aware retriever
-    history_aware_retriever = create_history_aware_retriever(
-        llm, retriever, contextualize_q_prompt
-    )
+    # history_aware_retriever = create_history_aware_retriever(
+    #     llm, retriever, contextualize_q_prompt
+    # )
 
     # Answer question prompt
     qa_system_prompt = (
         "You are an assistant for question-answering tasks. Use "
         "the below pieces of retrieved context to answer the "
-        "question.Dont use any other knowledge source." 
+        "question , Dont use your knowledge base to answer"
         "Your answer should be purely based on below provided context"
-        "Dont use your knowledge or web"
-        " If you don't know the answer, just say that you "
+        " If you cant find the answer in the provided prompt/context, just say that you "
         "don't know. Use three sentences maximum and keep the answer "
         "concise."
         "Here is the context find answer from it"
@@ -71,19 +73,51 @@ def getRagChain(collection_name : str) -> any:
     )
 
 
-    # Create a prompt template for answering questions
+    #Create a prompt template for answering questions
     qa_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", qa_system_prompt),
             MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
+            ("human", "{query}"),
         ]
     )
 
+    # PreBuilt History aware retriver in langchain
     # Create a chain to combine documents for question answering
-    question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
-
+    # question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
     # Create a retrieval chain that combines the history-aware retriever and the question answering chain
-    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+    # rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+
+
+    # Lambda runnables
+    asItIsRunnable = RunnableLambda(lambda x : x)
+    printF = RunnableLambda(lambda x : (print(x) , x)[1] )
+    getQuery = RunnableLambda(lambda x : x["query"])
+    getContextualizedQPrompt = RunnableLambda(lambda x : contextualize_q_prompt.format_prompt(**x))
+    retrieveRelDocs = RunnableLambda(lambda x : (print((retriever.invoke(x["query"]))) , retriever.invoke(x["query"])[1] ))
+    getFormattedQAPrompt = RunnableLambda(lambda x : qa_prompt.format_prompt(**x))
+
+    q_branches = RunnableBranch(
+        (
+            lambda x : len(x["chat_history"]) == 0,
+            getQuery
+        ),
+            getContextualizedQPrompt | llm | StrOutputParser()
+    )
+
+    # My own history aware retrival chain
+    rag_chain = (
+        RunnableParallel(branches={ "question_rephrase" :q_branches , "as_it_is": asItIsRunnable}) 
+        # | printF
+        | RunnableLambda( lambda x :  {"query" :  x ["branches"]["question_rephrase"] , "chat_history" : x["branches"]["as_it_is"]["chat_history"] })
+        # | printF
+        | RunnableParallel(branches = { "retriever" : retrieveRelDocs ,"as_it_is" : asItIsRunnable })
+        | RunnableLambda ( lambda x : {"context" : x["branches"]["retriever"] , "query" : x["branches"]["as_it_is"]["query"] , "chat_history": x["branches"]["as_it_is"]["chat_history"] })
+        | getFormattedQAPrompt
+        # | printF
+        | llm
+        # | printF
+        # | StrOutputParser()
+    )
 
     return rag_chain
