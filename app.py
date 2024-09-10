@@ -1,5 +1,4 @@
 from langchain_core.messages import HumanMessage, AIMessage 
-from embedder import getEmbedder
 from embedd_files import embeddFiles
 from chain_setup import getRagChain
 
@@ -20,7 +19,7 @@ if len(files) == 0 :
 
     
 # Taking collection name as input
-COLLECTION_NAME = input("Enter Name Of Vector Store")
+COLLECTION_NAME = input("Enter Name Of Vector Store :")
 
 if len(COLLECTION_NAME) == 0 :
     raise Exception("Vector store name expected")
@@ -29,7 +28,6 @@ if len(COLLECTION_NAME) == 0 :
 # embedding input file and storing in vector store
 embeddFiles(files,COLLECTION_NAME)
 rag_chain =getRagChain(COLLECTION_NAME)
-
 
 
 # Function to simulate a continual chat
@@ -43,15 +41,15 @@ def continual_chat():
             break
         
         # Process the user's query through the retrieval chain
-        result = rag_chain.invoke({"input": query, "chat_history": chat_history})
+        result = rag_chain.invoke({"query": query, "chat_history": chat_history})
         # Display the AI's response
-        print(f"AI: {result['answer']}")
+        print(f"AI: {result.content}")
         
         # Update the chat history
         chat_history.append(HumanMessage(content=query))
-        chat_history.append(AIMessage(content=result["answer"]))  # Corrected here
+        chat_history.append(AIMessage(content= result.content ))  # Corrected here
 
         # Debugging output for chat history
-        print("Updated chat history:", chat_history)
+        # print("Updated chat history:", chat_history)
 
 continual_chat()
