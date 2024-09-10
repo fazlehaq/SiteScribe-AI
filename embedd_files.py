@@ -1,7 +1,8 @@
 import os
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import Chroma
+# from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from embedder import getEmbedder
 
 
@@ -56,3 +57,4 @@ def embeddFiles(filenames : list[str],collection_name : str) -> None :
     )
     print("\n--- Finished creating vector store ---")
 
+embeddFiles(["blog.txt"],"test3")
