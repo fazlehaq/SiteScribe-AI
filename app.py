@@ -2,31 +2,36 @@ from langchain_core.messages import HumanMessage, AIMessage
 from embedd_files import embeddFiles
 from chain_setup import getRagChain
 
-
-# assuming files are present in books directory
-# Taking filenames as input
+# Taking input filename and name of the vector store
 files = []
-while True :
-    print("1) Add file  \n2) Stop")
-    choice = int(input())
-    if choice == 2 : 
-        break
-    filename = input("filename : ")
-    files.append(filename)
+COLLECTION_NAME = None
 
-if len(files) == 0 :
-    raise Exception("At least 1 file is expected")
+choice = int(input("1) Use existing vectore store\n2) Create new vectore store\n"))
+if choice == 2 :
 
+    while True :
+        choice = int(input("1)Add Filename\n2)Stop\n"))
+        if choice == 2 :
+            break
+        filename = input("Enter filename : ")
+        files.append(filename)
     
-# Taking collection name as input
-COLLECTION_NAME = input("Enter Name Of Vector Store :")
+    if len(files) == 0 :
+        raise Exception("At least 1 file expected")
 
-if len(COLLECTION_NAME) == 0 :
-    raise Exception("Vector store name expected")
+    COLLECTION_NAME = input("Enter name for your vector store :")
 
+    if len(COLLECTION_NAME) == 0 :
+        raise Exception("Vector store name is expected")
 
-# embedding input file and storing in vector store
-embeddFiles(files,COLLECTION_NAME)
+    embeddFiles(files,COLLECTION_NAME)    
+
+else :
+    COLLECTION_NAME = input("Enter name for your vector store ")
+    
+    if len(COLLECTION_NAME) == 0 :
+        raise Exception("Vector store name is expected")
+    
 rag_chain =getRagChain(COLLECTION_NAME)
 
 
