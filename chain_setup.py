@@ -91,7 +91,7 @@ def getRagChain(collection_name : str) -> any:
 
     # Lambda runnables
     asItIsRunnable = RunnableLambda(lambda x : x)
-    printF = RunnableLambda(lambda x : (print(x) , x)[1] )
+    printF = RunnableLambda(lambda x : (print(x) , x)[1] ) # for debugging
     getQuery = RunnableLambda(lambda x : x["query"])
     getContextualizedQPrompt = RunnableLambda(lambda x : contextualize_q_prompt.format_prompt(**x))
     retrieveRelDocs = RunnableLambda(lambda x : (print((retriever.invoke(x["query"]))) , retriever.invoke(x["query"])[1] ))
@@ -108,16 +108,11 @@ def getRagChain(collection_name : str) -> any:
     # My own history aware retrival chain
     rag_chain = (
         RunnableParallel(branches={ "question_rephrase" :q_branches , "as_it_is": asItIsRunnable}) 
-        # | printF
         | RunnableLambda( lambda x :  {"query" :  x ["branches"]["question_rephrase"] , "chat_history" : x["branches"]["as_it_is"]["chat_history"] })
-        # | printF
         | RunnableParallel(branches = { "retriever" : retrieveRelDocs ,"as_it_is" : asItIsRunnable })
         | RunnableLambda ( lambda x : {"context" : x["branches"]["retriever"] , "query" : x["branches"]["as_it_is"]["query"] , "chat_history": x["branches"]["as_it_is"]["chat_history"] })
         | getFormattedQAPrompt
-        # | printF
         | llm
-        # | printF
-        # | StrOutputParser()
     )
 
     return rag_chain
