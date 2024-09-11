@@ -94,7 +94,8 @@ def getRagChain(collection_name : str) -> any:
     printF = RunnableLambda(lambda x : (print(x) , x)[1] ) # for debugging
     getQuery = RunnableLambda(lambda x : x["query"])
     getContextualizedQPrompt = RunnableLambda(lambda x : contextualize_q_prompt.format_prompt(**x))
-    retrieveRelDocs = RunnableLambda(lambda x : (print((retriever.invoke(x["query"]))) , retriever.invoke(x["query"])[1] ))
+    # retrieveRelDocs = RunnableLambda(lambda x : (print((retriever.invoke(x["query"]))) , retriever.invoke(x["query"])[1] ))
+    retrieveRelDocs = RunnableLambda(lambda x : print((retriever.invoke(x["query"]))))
     getFormattedQAPrompt = RunnableLambda(lambda x : qa_prompt.format_prompt(**x))
 
     q_branches = RunnableBranch(

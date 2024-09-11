@@ -8,7 +8,7 @@ COLLECTION_NAME = None
 
 choice = int(input("1) Use existing vectore store\n2) Create new vectore store\n"))
 if choice == 2 :
-
+    
     while True :
         choice = int(input("1)Add Filename\n2)Stop\n"))
         if choice == 2 :
