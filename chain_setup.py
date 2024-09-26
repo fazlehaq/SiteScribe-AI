@@ -22,8 +22,7 @@ def getRagChain(collection_name : str) -> RunnableSerializable :
 
     # Create a retriever for querying the vector store
     retriever = db.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={"k": 3 , "score_threshold" : 0.3},
+        search_type="similarity",
     )
 
     # Create the LLM model
@@ -91,15 +90,24 @@ def getRagChain(collection_name : str) -> RunnableSerializable :
     printF = RunnableLambda(lambda x : (print(x) , x)[1] ) # for debugging
     getQuery = RunnableLambda(lambda x : x["query"])
     getContextualizedQPrompt = RunnableLambda(lambda x : contextualize_q_prompt.format_prompt(**x))
-    retrieveRelDocs = RunnableLambda(lambda x :  retriever.invoke(x["query"]))
+    retrieveRelDocs = RunnableLambda(lambda x :  (retriever.invoke(x["query"]) , print(len(retriever.invoke(x["query"]))))[0] )
     getFormattedQAPrompt = RunnableLambda(lambda x : qa_prompt.format_prompt(**x))
 
     q_branches = RunnableBranch(
         (
-            lambda x : len(x["chat_history"]) == 0,
+            lambda x : False,
             getQuery
         ),
-            getContextualizedQPrompt | llm | printF |  StrOutputParser()
+        printF | getContextualizedQPrompt | llm  |  StrOutputParser()
+    )
+
+    # if we have any docs then we call the llm else we just return the message
+    getTheAnswer = RunnableBranch(
+        (
+            lambda x :  isinstance(x["context"],list) and len( x["context"]) == 0 ,
+            RunnableLambda (lambda x : "No related docs found !")
+        ),
+        printF  |getFormattedQAPrompt | llm
     )
 
     # My own history aware retrival chain
@@ -108,8 +116,7 @@ def getRagChain(collection_name : str) -> RunnableSerializable :
         | RunnableLambda( lambda x :  {"query" :  x ["branches"]["question_rephrase"] , "chat_history" : x["branches"]["as_it_is"]["chat_history"] }) # correctly structuring the input to the next chain
         | RunnableParallel(branches = { "retriever" : retrieveRelDocs ,"as_it_is" : asItIsRunnable }) # Retrieving the relevent docs
         | RunnableLambda ( lambda x : {"context" : x["branches"]["retriever"] , "query" : x["branches"]["as_it_is"]["query"] , "chat_history": x["branches"]["as_it_is"]["chat_history"] }) # combining inputs from last branch 
-        | getFormattedQAPrompt # inserting query and retrived context from the vector store to the propmpt template
-        | llm # calling llm and passing it the prompt
+        | getTheAnswer # getting the answer
     )
 
     return rag_chain
