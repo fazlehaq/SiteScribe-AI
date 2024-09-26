@@ -1,19 +1,16 @@
 import os
 from dotenv import load_dotenv
-# from langchain.chains.history_aware_retriever import create_history_aware_retriever
-# from langchain.chains.retrieval  import create_retrieval_chain
-# from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.runnables import RunnableBranch , RunnableSequence , RunnableLambda , RunnableParallel
+from langchain_core.runnables import RunnableBranch , RunnableSerializable , RunnableLambda , RunnableParallel
 from langchain_core.output_parsers import StrOutputParser
 
 from embedder import getEmbedder
 
 load_dotenv()
 
-def getRagChain(collection_name : str) -> any:
+def getRagChain(collection_name : str) -> RunnableSerializable :
     current_dir = os.path.dirname(os.path.abspath(__file__))
     persistent_directory = os.path.join(current_dir, "db", collection_name)
 
@@ -94,8 +91,7 @@ def getRagChain(collection_name : str) -> any:
     printF = RunnableLambda(lambda x : (print(x) , x)[1] ) # for debugging
     getQuery = RunnableLambda(lambda x : x["query"])
     getContextualizedQPrompt = RunnableLambda(lambda x : contextualize_q_prompt.format_prompt(**x))
-    # retrieveRelDocs = RunnableLambda(lambda x : (print((retriever.invoke(x["query"]))) , retriever.invoke(x["query"])[1] ))
-    retrieveRelDocs = RunnableLambda(lambda x : print((retriever.invoke(x["query"]))))
+    retrieveRelDocs = RunnableLambda(lambda x :  retriever.invoke(x["query"]))
     getFormattedQAPrompt = RunnableLambda(lambda x : qa_prompt.format_prompt(**x))
 
     q_branches = RunnableBranch(
@@ -103,17 +99,17 @@ def getRagChain(collection_name : str) -> any:
             lambda x : len(x["chat_history"]) == 0,
             getQuery
         ),
-            getContextualizedQPrompt | llm | StrOutputParser()
+            getContextualizedQPrompt | llm | printF |  StrOutputParser()
     )
 
     # My own history aware retrival chain
     rag_chain = (
-        RunnableParallel(branches={ "question_rephrase" :q_branches , "as_it_is": asItIsRunnable}) 
-        | RunnableLambda( lambda x :  {"query" :  x ["branches"]["question_rephrase"] , "chat_history" : x["branches"]["as_it_is"]["chat_history"] })
-        | RunnableParallel(branches = { "retriever" : retrieveRelDocs ,"as_it_is" : asItIsRunnable })
-        | RunnableLambda ( lambda x : {"context" : x["branches"]["retriever"] , "query" : x["branches"]["as_it_is"]["query"] , "chat_history": x["branches"]["as_it_is"]["chat_history"] })
-        | getFormattedQAPrompt
-        | llm
+        RunnableParallel(branches={ "question_rephrase" :q_branches , "as_it_is": asItIsRunnable}) # Rephrase the query from the chat history if exists
+        | RunnableLambda( lambda x :  {"query" :  x ["branches"]["question_rephrase"] , "chat_history" : x["branches"]["as_it_is"]["chat_history"] }) # correctly structuring the input to the next chain
+        | RunnableParallel(branches = { "retriever" : retrieveRelDocs ,"as_it_is" : asItIsRunnable }) # Retrieving the relevent docs
+        | RunnableLambda ( lambda x : {"context" : x["branches"]["retriever"] , "query" : x["branches"]["as_it_is"]["query"] , "chat_history": x["branches"]["as_it_is"]["chat_history"] }) # combining inputs from last branch 
+        | getFormattedQAPrompt # inserting query and retrived context from the vector store to the propmpt template
+        | llm # calling llm and passing it the prompt
     )
 
     return rag_chain
