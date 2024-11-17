@@ -1,49 +1,44 @@
-# SiteScribe-AI: Intelligent Website Assistant
+Here's a **README.md** template for your chatbot project:
 
-## Overview
+---
 
-SiteScribe-AI is an advanced virtual assistant chatbot designed to revolutionize the way users interact with website content. By leveraging cutting-edge AI technologies, SiteScribe-AI addresses the challenge of poorly structured and dispersed web information, providing users with accurate and up-to-date responses specific to a target website.
+# Context-Aware Chatbot with Retrieval-Augmented Generation (RAG)
 
-## Problem Statement
+This project implements a **Context-Aware Chatbot** using the **Retrieval-Augmented Generation (RAG)** technique, enabling the bot to answer user queries based on a given text corpus. The system remembers context from previous interactions and dynamically rephrases queries to optimize the answer generation.
 
-The internet is vast and filled with information, but websites are often poorly structured, making it difficult for users to find the exact information they need. While Large Language Models (LLMs) have made significant strides in information retrieval, obtaining current and specific information about a particular website remains challenging. SiteScribe-AI aims to bridge this gap by providing a tailored chatbot solution for individual websites.
+The chatbot uses a pipeline for **question rephrasing** to ensure that it can adapt to the context and provide accurate responses even if the query is slightly altered.
 
-## Key Features
+## Technologies Used
 
-- Website-specific virtual assistant
-- Utilizes Retrieval-Augmented Generation (RAG) for accurate responses
-- Query rephrasing based on context for improved understanding
-- Efficient pipelines for streamlined query and QA flow
-- Continuous improvements in indexing, embeddings, and data retrieval
+- **Python**: The primary programming language used to build the chatbot system.
+- **Poetry**: For managing project dependencies and packaging.
+- **Langchain**: For orchestrating the logic and managing the RAG pipeline.
+- **Gemini API**: Utilized for querying and interacting with external AI models for response generation.
+- **Sentence Encoder**: For creating embeddings that allow the chatbot to effectively understand and retrieve relevant information from the corpus.
 
-## Technology Stack
+## Features
 
-- Python
-- LangChain
-- Gemini Flash 1.5 LLM
-- Google's sentence encoder 
-- RAG (Retrieval-Augmented Generation)
+- **Context Awareness**: The chatbot can remember previous interactions, ensuring it maintains context throughout a conversation.
+- **Query Rephrasing**: The system rephrases incoming queries based on the context to enhance the quality of responses.
+- **RAG Integration**: Combines retrieval and generation methods to answer queries based on provided text data.
+- **Dynamic Response Generation**: Uses state-of-the-art APIs and models to generate responses dynamically based on user input.
 
-## Pre-requisites 
+## Usage
 
-- Python < 3.8 
-- Poetry 
-- Google Gemini API key
+- **Ask a Question**: Once the chatbot is running, you can ask it questions based on the given text data. The bot will use its contextual memory to provide relevant answers.
+- **Contextual Interaction**: The chatbot will remember context from previous queries in the session, making the conversation more natural and coherent.
+- **Rephrasing Queries**: The system intelligently rephrases queries before passing them through the RAG pipeline to ensure optimal responses.
 
-## Current Progress
+## Example Workflow
 
-- Implemented functional RAG-based chatbot
-- Successfully answers questions based on provided text files
-- Developed query rephrasing capabilities
-- Established pipelines for efficient chatbot query and QA flow
-- Ongoing improvements in indexing, embeddings, and data retrieval
+1. **Initial Query**:
+   User: "What is the capital of France?"
 
-## Roadmap
+2. **Response**:
+   Bot: "The capital of France is Paris."
 
-- [ ] Enhance indexing and embedding techniques
-- [ ] Improve data retrieval algorithms
-- [ ] Implement web scraping for target websites (considering third-party services like FireCrawler)
-- [ ] Train the model with actual website data
-- [ ] Explore potential transition from RAG to fine-tuning approach
-- [ ] Optimize performance and accuracy metrics
+3. **Contextual Follow-up**:
+   User: "And how far is it from Berlin?"
 
+4. **Response**:
+   Bot: "Paris is approximately 1,050 km away from Berlin."
